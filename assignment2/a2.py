@@ -7,6 +7,10 @@ import ast
 import random
 from sys import stderr
 from typing import Any, Callable, Dict, List, Optional, Tuple
+import time
+
+class SearchTimeout(Exception):
+    pass
 
 # ---------------------------------------------------------------------------
 # Assignment restrictions (see assignment page)
@@ -45,7 +49,24 @@ def print_error(error: str) -> None:
 def opponent(color: str) -> str:
     return WHITE if color == BLACK else BLACK
 
+def simulate_move(heaps, heights, player, move):
+    heap = heaps[move]
+    height = heights[move]
+    gained = 0
 
+    # Take player's own color tokens
+    while height > 0 and heap[height - 1][0] == player:
+        gained += heap[height - 1][1]
+        height -= 1
+    #take the first opponent's token after player getting its own tokens
+    if height > 0:
+        gained += heap[height - 1][1]
+        height -= 1
+
+    new_heights = list(heights)
+    new_heights[move] = height
+
+    return tuple(new_heights), gained
 # ---------------------------------------------------------------------------
 # Input validation
 # ---------------------------------------------------------------------------
@@ -243,7 +264,7 @@ class CommandInterface:
         if not moves:
             print_error("no legal moves")
             return False
-        # you need to replace this random move by a move from your solver
+        
         move = random.choice(moves)
         self.game.play(move)
         print(move)
@@ -271,22 +292,26 @@ class CommandInterface:
 # You need to implement the following methods.
 #============================================================================
     def cmd_solve(self, args: str) -> bool:
-        move = self.solve()
-        if move is not None:
-            colour, move = move
-            print(f"{colour}", end="")
-            if colour == self.game.to_play:
-                print(f" {move}")
-            return True
-        else:
+        result = self.solve()
+
+        if result is None:
             return False
+
+        winner, move = result
+
+        if winner == self.game.toplay:
+            print(winner, move)
+        else:
+            print(winner)
+
+        return True
 
     def cmd_timelimit(self, args: str) -> bool:
         try:
-            s = int(args[0])
+            s = int(args)
             if s not in range(1,101):
                 raise ValueError()
-        except:
+        except ValueError:
             print_error("invalid timelimit")
             return False
         self.timelimit = s
@@ -302,7 +327,80 @@ class CommandInterface:
             move is for game.to_play (whether winning or losing)
         Returns None if it times out
         """
-        return None
+        game = self.game
+
+        heaps = game.heaps
+        heights = tuple(len(heap) for heap in heaps)
+
+        player = game.toplay
+        score_diff = game.score['b'] - game.score['w']
+
+        deadline = time.monotonic() + self.timelimit
+        cache = {}
+
+        def minimax(heights, player, score_diff):
+            # Check timelimit
+            if time.monotonic() >= deadline:
+                raise SearchTimeout()
+
+            # Base case
+            if all(height == 0 for height in heights):
+                if score_diff > 0:
+                    return 'b', None
+                else:
+                    return 'w', None
+
+            # Transposition table lookup
+            state = (heights, player, score_diff)
+
+            if state in cache:
+                return cache[state]
+
+            # Try each legal heap
+            for move in range(len(heights)):
+                if heights[move] == 0:
+                    continue
+
+                new_heights, gained = simulate_move(
+                    heaps, heights, player, move
+                )
+
+                # Score difference
+                if player == 'b':
+                    new_diff = score_diff + gained
+                else:
+                    new_diff = score_diff - gained
+
+                next_player = opponent(player)
+
+                winner, _ = minimax(
+                    new_heights,
+                    next_player,
+                    new_diff
+                )
+
+                # Found a winning move
+                if winner == player:
+                    result = (player, move)
+                    cache[state] = result
+                    return result
+
+            # Every legal move loses
+            result = (opponent(player), None)
+            cache[state] = result
+            return result
+
+        try:
+            result = minimax(heights, player, score_diff)
+
+            # Verify deadline before returning
+            if time.monotonic() >= deadline:
+                return None
+
+            return result
+
+        except SearchTimeout:
+            return None
 
 #============================================================================
 # The code below should not need modification

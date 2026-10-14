@@ -427,13 +427,13 @@ class CommandInterface:
                     new_diff
                 )
 
-                # Found a winning move
+                
                 if winner == player:
                     result = (player, move)
                     cache[state] = result
                     return result
 
-            # Every legal move loses
+            
             result = (opponent(player), None)
             cache[state] = result
             return result
@@ -441,7 +441,7 @@ class CommandInterface:
         try:
             result = minimax(heights, player, score_diff)
 
-            # Verify deadline before returning
+            
             if time.monotonic() >= deadline:
                 return None
 

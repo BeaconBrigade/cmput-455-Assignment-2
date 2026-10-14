@@ -352,7 +352,7 @@ class CommandInterface:
         deadline = time.monotonic() + self.timelimit
         cache = {}
 
-        def minimax(heights, player, score_diff):
+        def minimax(heights, player, score_diff, alpha, beta):
             # Check timelimit
             if time.monotonic() >= deadline:
                 raise SearchTimeout()
@@ -390,8 +390,22 @@ class CommandInterface:
                 winner, _ = minimax(
                     new_heights,
                     next_player,
-                    new_diff
+                    new_diff,
+                    -beta,
+                    -alpha
                 )
+                if winner == player:
+                    winner_as_int = 1
+                elif winner is None:
+                    winner_as_int = 0
+                else:
+                    winner_as_int = -1
+                if player == 'b':
+                    alpha = max(alpha, winner_as_int)
+                else:
+                    beta = min(beta, winner_as_int)
+                if alpha >= beta:
+                    continue
 
                 # Found a winning move
                 if winner == player:
@@ -405,7 +419,7 @@ class CommandInterface:
             return result
 
         try:
-            result = minimax(heights, player, score_diff)
+            result = minimax(heights, player, score_diff, float("-inf"), float("inf"))
 
             # Verify deadline before returning
             if time.monotonic() >= deadline:

@@ -1,0 +1,16 @@
+Script started on 2026-10-13 23:22:40-06:00 [TERM="tmux-256color" TTY="/dev/pts/38" COLUMNS="208" LINES="40"]
+rcullen@ohaton:~/cmput455/cmput-455-Assignment-2/assignment2>python3 a2test.py a2.py assignment2-public-tests.txt
+[34mSummary report:
+[0m78 tests performed
+[32m78 / 78 output statuses matched.
+[0m[32m78 / 78 command outputs matched.
+[0m[32m0 / 78 tests timed out.
+[0m[34mMarks report
+[0m78 / 78 marked tests passed.
+Public test mark: 1.00 / 1 mark (20.0% of the 5 marks for this assignment).
+
+Finished after 5.94 seconds.
+rcullen@ohaton:~/cmput455/cmput-455-Assignment-2/assignment2>exit
+exit
+
+Script done on 2026-10-13 23:23:49-06:00 [COMMAND_EXIT_CODE="0"]

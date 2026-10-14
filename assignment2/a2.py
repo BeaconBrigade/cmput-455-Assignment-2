@@ -256,7 +256,7 @@ class CommandInterface:
         print("yes" if self.game.is_legal(heap_number) else "no")
         return True
 
-    def gen_randmove(self) -> int | None:
+    def gen_randmove(self):
         moves = self.game.legal_moves()
         if not moves:
             return None
@@ -333,7 +333,7 @@ class CommandInterface:
 #============================================================================
 # End of functions requiring implementation
 #============================================================================
-    def solve(self) -> tuple[str, int] | None:
+    def solve(self):
         """
         The actual solver:
         

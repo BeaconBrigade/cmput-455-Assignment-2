@@ -256,16 +256,30 @@ class CommandInterface:
         print("yes" if self.game.is_legal(heap_number) else "no")
         return True
 
+    def gen_randmove(self) -> int | None:
+        moves = self.game.legal_moves()
+        if not moves:
+            return None
+
+        return random.choice(moves)
+
     def cmd_genmove(self, args: str) -> bool:
         if self.game is None:
             print_error("no game started")
             return False
-        moves = self.game.legal_moves()
-        if not moves:
+        res = self.solve()
+        if res is None:
+            # use a random move if we couldn't solve it
+            move = self.gen_randmove()
+        else:
+            # our solver's move
+            colour, move = res
+            if colour != self.game.toplay:
+                move = self.gen_randmove()
+        if move is None:
             print_error("no legal moves")
             return False
         
-        move = random.choice(moves)
         self.game.play(move)
         print(move)
         return True

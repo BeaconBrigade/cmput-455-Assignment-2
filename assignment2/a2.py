@@ -267,19 +267,19 @@ class CommandInterface:
         if self.game is None:
             print_error("no game started")
             return False
+
         res = self.solve()
         if res is None:
-            # use a random move if we couldn't solve it
             move = self.gen_randmove()
         else:
-            # our solver's move
             colour, move = res
             if colour != self.game.toplay:
                 move = self.gen_randmove()
+
         if move is None:
             print_error("no legal moves")
             return False
-        
+
         self.game.play(move)
         print(move)
         return True
@@ -336,7 +336,7 @@ class CommandInterface:
     def solve(self):
         """
         The actual solver:
-        
+
         Returns a tuple of (colour, move) if it reaches a solution
             move is for game.to_play (whether winning or losing)
         Returns None if it times out
@@ -352,7 +352,15 @@ class CommandInterface:
         deadline = time.monotonic() + self.timelimit
         cache = {}
 
-        def minimax(heights, player, score_diff, alpha, beta):
+        #compute remaining token values
+        prefix = []
+        for heap in heaps:
+            sums = [0]
+            for color, value in heap:
+                sums.append(sums[-1] + value)
+            prefix.append(sums)
+
+        def minimax(heights, player, score_diff):
             # Check timelimit
             if time.monotonic() >= deadline:
                 raise SearchTimeout()
@@ -364,13 +372,33 @@ class CommandInterface:
                 else:
                     return 'w', None
 
+            remaining = 0
+            for i in range(len(heights)):
+                remaining += prefix[i][heights[i]]
+
+            if score_diff > remaining:
+                winner = 'b'
+            elif score_diff + remaining < 0:
+                winner = 'w'
+            else:
+                winner = None
+
+            if winner is not None:
+                if winner == player:
+                    for move in range(len(heights)):
+                        if heights[move] > 0:
+                            return winner, move
+
+                return winner, None
+
             # Transposition table lookup
             state = (heights, player, score_diff)
 
             if state in cache:
                 return cache[state]
 
-            # Try each legal heap
+            moves = []
+
             for move in range(len(heights)):
                 if heights[move] == 0:
                     continue
@@ -378,6 +406,12 @@ class CommandInterface:
                 new_heights, gained = simulate_move(
                     heaps, heights, player, move
                 )
+
+                moves.append((gained, move, new_heights))
+
+            moves.sort(reverse=True)
+
+            for gained, move, new_heights in moves:
 
                 # Score difference
                 if player == 'b':
@@ -390,22 +424,8 @@ class CommandInterface:
                 winner, _ = minimax(
                     new_heights,
                     next_player,
-                    new_diff,
-                    -beta,
-                    -alpha
+                    new_diff
                 )
-                if winner == player:
-                    winner_as_int = 1
-                elif winner is None:
-                    winner_as_int = 0
-                else:
-                    winner_as_int = -1
-                if player == 'b':
-                    alpha = max(alpha, winner_as_int)
-                else:
-                    beta = min(beta, winner_as_int)
-                if alpha >= beta:
-                    continue
 
                 # Found a winning move
                 if winner == player:
@@ -419,7 +439,7 @@ class CommandInterface:
             return result
 
         try:
-            result = minimax(heights, player, score_diff, float("-inf"), float("inf"))
+            result = minimax(heights, player, score_diff)
 
             # Verify deadline before returning
             if time.monotonic() >= deadline:
